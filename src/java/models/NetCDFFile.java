@@ -14,6 +14,7 @@ import java.util.Calendar;
 import java.util.Date;
 import org.joda.time.DateTime;
 import org.joda.time.Hours;
+import org.joda.time.Period;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
@@ -43,7 +44,7 @@ public class NetCDFFile {
         // Get the latitude, longitude and time Variables.
         Variable latVar = dataFile.findVariable("Latitude");
         Variable lonVar = dataFile.findVariable("Longitude");
-        Variable timeVar = dataFile.findVariable("time");
+        Variable timeVar = dataFile.findVariable("Time");
                
         // Get the lat/lon data from the file.
         ArrayFloat.D1 latArray;
@@ -54,7 +55,12 @@ public class NetCDFFile {
         // Get the time array and time units
         //String timedt = timeVar.getDataType().toString();
         Array timeArray;
-        timeArray = timeVar.read();
+        if( timeVar != null){
+            timeArray = timeVar.read();
+        } else {
+            timeVar = dataFile.findVariable("time");
+            timeArray = timeVar.read();
+        }
         
         String timeunits = timeVar.getUnitsString();
         
@@ -96,14 +102,36 @@ public class NetCDFFile {
         int dayOfYearS = -1;
         int dayOfYearE = -1;
         
-        if(timeunits.contains("days")){
-            dayOfYearS = dt1.getDayOfYear()-1;
-            dayOfYearE = dt2.getDayOfYear()-1;
-        } else if(timeunits.contains("hours")){
-            dayOfYearS = dt1.getHourOfDay();
-            dayOfYearE = dt2.getHourOfDay();
+        if( this.path.contains("Atlas")){
+            if(timeunits.contains("days")){
+                dayOfYearS = dt1.getDayOfYear()-1;
+                dayOfYearE = dt2.getDayOfYear()-1;
+            } else if(timeunits.contains("hours")){
+                dayOfYearS = dt1.getHourOfDay();
+                dayOfYearE = dt2.getHourOfDay();
+            }
+        } else {
+            if(timeunits.contains("hours")){
+                String[] parts = timeunits.split(" ");
+                String sday = parts[2]+" "+parts[3]; // date like yyyy-dd-mm 00:00:00
+                DateTimeFormatter formatter_ = DateTimeFormat.forPattern("yyyy-M-d HH:mm:ss");
+                DateTime dt = formatter_.parseDateTime(sday);
+                
+                
+                Hours hours1 = Hours.hoursBetween(dt, dt1);
+                dayOfYearS = hours1.getHours();
+                Hours hours2 = Hours.hoursBetween(dt, dt2);
+                dayOfYearE = hours2.getHours();
+
+                /*
+                Period p1 = new Period(dt, dt1);
+                dayOfYearS = p1.getHours();
+                Period p2 = new Period(dt, dt2);
+                dayOfYearE = p2.getHours();
+                */
+            }
         }
-        
+        /*
         for (int timeindx = 0; timeindx < timeLen; timeindx++){
             if ((int) timeArray.getDouble(timeindx) == dayOfYearS ){
                 //we found the time index
@@ -112,16 +140,25 @@ public class NetCDFFile {
                 etimeindex = timeindx;
             }
         }
+        */
+        
+        stimeindex = dayOfYearS;
+        etimeindex = dayOfYearE;
         
         String result = null;
         // Get the U10 and V10 variables
-        Variable uVar = dataFile.findVariable("U10");
-        Variable vVar = dataFile.findVariable("V10");
+        Variable uVar = dataFile.findVariable("Uat10");
+        Variable vVar = dataFile.findVariable("Vat10");
         
         if(latindex != -1 && lonindex != -1 ){
             int[] origin = new int[] {stimeindex, latindex, lonindex};
             int timeSize = etimeindex-stimeindex;
-            int[] size = new int[] {timeSize, 1, 1};
+            int[] size = new int[] {timeSize+1, 1, 1};
+            
+            if( uVar == null ){
+                uVar = dataFile.findVariable("U10");
+                vVar = dataFile.findVariable("V10");
+            }
             Array data3DU = uVar.read(origin, size);
             Array data3DV = vVar.read(origin, size);
             Array data1DU = data3DU.reduce();

@@ -55,7 +55,38 @@ public class MainResource {
         try {
             /*Create connection to file*/
             /*declaring sentences we going to use*/
-            NetCDFFile newnetcdf = new NetCDFFile("/home/ixchel/"+folder+"/"+filename,lat,lon,initdate,enddate);
+            NetCDFFile newnetcdf = new NetCDFFile("/ServerData/OWGIS/Atlas/"+folder+"/"+filename,lat,lon,initdate,enddate);
+            jsonResult = "{ \"result\" : { "+newnetcdf.getUVByDaterangeAndCoordinates()+" } }";
+        } catch (IOException ex) {
+            Logger.getLogger(MainResource.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (InvalidRangeException ex) {
+            Logger.getLogger(MainResource.class.getName()).log(Level.SEVERE, null, ex);
+        }
+		
+		DateFormat formatter ;
+		Date datey ;
+		formatter = new SimpleDateFormat("yyyy-MM-dd HH");
+        /*parse dias as Int*/
+        //int ndays = Integer.parseInt(dias);
+		
+		
+		return jsonResult;
+	}
+    
+    /**
+	 * Retrieves representation of an instance of 
+	 * @return an instance of java.lang.String
+	 */
+	@GET
+	@Path("/generica/{folder}/{filename}/{lat}/{lon}/{initdate}/{enddate}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public String getRoseWind(@PathParam("folder") String folder, @PathParam("filename") String filename, @PathParam("lat") float lat, @PathParam("lon") float lon,@PathParam("initdate") String initdate, @PathParam("enddate") String enddate) {
+        
+        String jsonResult = "";
+        try {
+            /*Create connection to file*/
+            /*declaring sentences we going to use*/
+            NetCDFFile newnetcdf = new NetCDFFile("/ServerData/OWGIS/"+folder+"/"+filename,lat,lon,initdate,enddate);
             jsonResult = "{ \"result\" : { "+newnetcdf.getUVByDaterangeAndCoordinates()+" } }";
         } catch (IOException ex) {
             Logger.getLogger(MainResource.class.getName()).log(Level.SEVERE, null, ex);
